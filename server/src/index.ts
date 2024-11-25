@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from 'dotenv'
 import { Server as HttpServer } from 'http'
-import prisma from "./config/db.config";
+import { createUsersRoutes } from "./routes/users.routes";
 
 dotenv.config()
 
@@ -10,6 +10,8 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 const httpServer = new HttpServer(app)
+
+app.use('/api/users', createUsersRoutes())
 
 const PORT: number = Number(process.env.PORT) || 3030
 const server = httpServer.listen(PORT, () => {

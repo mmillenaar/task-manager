@@ -6,6 +6,13 @@ declare global {
             JWT_SECRET: string
         }
     }
+    namespace Express {
+        interface Request {
+            user?: {
+                id: string
+            }
+        }
+    }
 }
 
 export {}
