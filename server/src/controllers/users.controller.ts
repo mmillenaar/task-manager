@@ -3,8 +3,27 @@ import * as userService from "../services/users.service";
 import { generateToken } from "../utils/jwt";
 
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const { email, username, password } = req.body;
+
+    // Validate required fields first
+    if (!email || !username || !password) {
+        res.status(400).json({
+            success: false,
+            message: 'Email, username and password are required'
+        });
+        return;
+    }
+
     try {
         const user = await userService.register(req.body);
+        if (!user) {
+            res.status(409).json({
+                success: false,
+                message: 'Email already exists'
+            });
+            return;
+        }
+
         const token = generateToken(user.id)
         res.status(201).json({
             success: true,
@@ -12,9 +31,13 @@ export const register = async (req: Request, res: Response, next: NextFunction):
             user,
             token
         });
-        return
+        return;
     } catch (error) {
-        next(error);
+        res.status(500).json({
+            success: false,
+            message: 'An unexpected error occurred'
+        });
+        return;
     }
 }
 
@@ -24,9 +47,9 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
         if (!user) {
             res.status(401).json({
                 success: false,
-                message: 'Invalid credentials'
+                message: 'Invalid email or password'
             });
-            return
+            return;
         }
         const token = generateToken(user.id)
         res.status(200).json({
@@ -35,12 +58,20 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
             user,
             token
         });
-        return
+        return;
     } catch (error) {
-        next(error);
+        res.status(500).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'An unexpected error occurred'
+        });
+        return;
     }
 }
 
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
-    // TODO: implement
+    res.status(200).json({
+        success: true,
+        message: 'Logout successful'
+    });
+    return
 }

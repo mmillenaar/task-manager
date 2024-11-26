@@ -1,8 +1,9 @@
-import { Tag, User } from "@prisma/client"
+import { User } from "@prisma/client"
 import { TaskStatus } from "./constants"
 
 export interface UserValidationData {
     email: string
+    username: string
     password: string
 }
 
@@ -23,4 +24,9 @@ export interface TagData {
 export interface AuthResponse {
     token: string
     user: User
+}
+
+export interface TaskQueryParams {
+    tags?: string[];
+    status?: string;
 }

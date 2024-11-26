@@ -1,29 +1,39 @@
 import { Task } from "@prisma/client";
-import { TagData, TaskData } from "../utils/types";
+import { TagData, TaskData, TaskQueryParams } from "../utils/types";
 import prisma from "../config/db.config";
+import { TaskStatus } from "../utils/constants";
 
-export const getAllTasks = async (userId: string): Promise<Task[]> => {
+export const getAllTasks = async (userId: string, filters?: TaskQueryParams): Promise<Task[]> => {
     return prisma.task.findMany({
-        where: { userId },
+        where: {
+            userId,
+            ...(filters?.status && {
+                status: filters.status
+            }),
+            ...(filters?.tags && filters.tags.length > 0 && {
+                AND: filters.tags.map(tag => ({
+                    tags: {
+                        some: {
+                            name: tag
+                        }
+                    }
+                }))
+            })
+        },
         include: {
             tags: true
         }
     })
 }
 
-export const getTask = async (taskId: string): Promise<Task> => {
+export const getTask = async (taskId: string): Promise<Task | null> => {
     const task = await prisma.task.findUnique({
         where: { id: taskId },
         include: {
             tags: true
         }
     })
-
-    if (!task) {
-        throw new Error('Task not found')
-    }
-
-    return task
+    return task;
 }
 
 // Helper function for handling tags
@@ -49,71 +59,101 @@ const getOrCreateTags = async (tags: TagData[]): Promise<{ id: string }[]> => {
     return tagConnections
 }
 
-export const createTask = async (data: TaskData): Promise<Task> => {
+export const createTask = async (data: TaskData): Promise<Task | null> => {
     if (!data.title) {
-        throw new Error('Title is required')
+        return null;
     }
 
-    const tagConnections = data.tags ? await getOrCreateTags(data.tags) : []
-
-    return prisma.task.create({
-        data: {
-            title: data.title,
-            description: data.description,
-            status: data.status || 'pending',
-            dueDate: data.dueDate,
-            userId: data.userId,
-            tags: {
-                connect: tagConnections
+    try {
+        const tagConnections = data.tags ? await getOrCreateTags(data.tags) : []
+        return prisma.task.create({
+            data: {
+                title: data.title,
+                description: data.description,
+                status: data.status || TaskStatus.PENDING,
+                dueDate: data.dueDate,
+                userId: data.userId,
+                tags: {
+                    connect: tagConnections
+                }
+            },
+            include: {
+                tags: true
             }
-        },
-        include: {
-            tags: true
-        }
-    })
+        })
+    } catch (error) {
+        return null;
+    }
 }
 
-export const updateTask = async (
-    taskId: string,
-    data: TaskData
-): Promise<Task> => {
-    const existingTask = await prisma.task.findUnique({
-        where: { id: taskId }
-    })
+export const updateTask = async (taskId: string, data: TaskData): Promise<Task | null> => {
+    try {
+        const existingTask = await prisma.task.findUnique({
+            where: { id: taskId },
+            include: { tags: true }
+        });
 
-    if (!existingTask) {
-        throw new Error('Task not found')
-    }
-
-    const tagConnections = data.tags ? await getOrCreateTags(data.tags) : []
-
-    return prisma.task.update({
-        where: { id: taskId },
-        data: {
-            ...(data.title && { title: data.title }),
-            ...(data.description !== undefined && { description: data.description }),
-            ...(data.status && { status: data.status }),
-            ...(data.dueDate && { dueDate: data.dueDate }),
-            tags: {
-                set: tagConnections
-            }
-        },
-        include: {
-            tags: true
+        if (!existingTask) {
+            return null;
         }
-    })
+
+        // Filter out any invalid tags
+        const validTags = data.tags?.filter(tag =>
+            tag && typeof tag.name === 'string' && tag.name.trim() !== ''
+        ) || [];
+
+        // Get or create valid tags
+        const tagConnections = validTags.length > 0
+            ? await getOrCreateTags(validTags)
+            : [];
+
+        // Update task with new tag connections
+        const updatedTask = await prisma.task.update({
+            where: { id: taskId },
+            data: {
+                ...(data.title && { title: data.title }),
+                ...(data.description !== undefined && { description: data.description }),
+                ...(data.status && { status: data.status }),
+                ...(data.dueDate && { dueDate: data.dueDate }),
+                tags: {
+                    set: tagConnections // This will remove any old tags not in the new set
+                }
+            },
+            include: {
+                tags: true
+            }
+        });
+
+        // Clean up orphaned tags (tags not used by any tasks)
+        await prisma.tag.deleteMany({
+            where: {
+                tasks: {
+                    none: {}  // Tags that aren't connected to any tasks
+                }
+            }
+        });
+
+        return updatedTask;
+    } catch (error) {
+        return null;
+    }
 }
 
-export const deleteTask = async (taskId: string): Promise<void> => {
-    const existingTask = await prisma.task.findUnique({
-        where: { id: taskId }
-    })
+export const deleteTask = async (taskId: string): Promise<boolean> => {
+    try {
+        const existingTask = await prisma.task.findUnique({
+            where: { id: taskId }
+        })
 
-    if (!existingTask) {
-        throw new Error('Task not found')
+        if (!existingTask) {
+            return false;
+        }
+
+        await prisma.task.delete({
+            where: { id: taskId }
+        })
+        return true;
+    } catch (error) {
+        return false;
     }
-
-    await prisma.task.delete({
-        where: { id: taskId }
-    })
 }

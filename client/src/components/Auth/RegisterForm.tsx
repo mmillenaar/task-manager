@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const RegisterForm = () => {
     const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
@@ -16,7 +17,7 @@ const RegisterForm = () => {
         e.preventDefault();
         setError('');
 
-        if (!email || !password || !confirmPassword) {
+        if (!email || !username || !password || !confirmPassword) {
             setError('All fields are required');
             return;
         }
@@ -29,7 +30,7 @@ const RegisterForm = () => {
         setLoading(true);
 
         try {
-            await register(email, password);
+            await register(email, username, password);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Registration failed');
         } finally {
@@ -56,6 +57,18 @@ const RegisterForm = () => {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         error={Boolean(error && !email)}
+                    />
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
+                        id="username"
+                        label="Username"
+                        name="username"
+                        autoComplete="username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        error={Boolean(error && !username)}
                     />
                     <TextField
                         margin="normal"

@@ -97,10 +97,10 @@ export const TaskForm: React.FC<TaskFormProps> = ({ editTask, onCancel }) => {
                         onChange={(e) => setStatus(e.target.value as TaskStatus)}
                         label="Status"
                     >
-                        <MenuItem value="Pending">Pending</MenuItem>
-                        <MenuItem value="In Progress">In Progress</MenuItem>
-                        <MenuItem value="Completed">Completed</MenuItem>
-                        <MenuItem value="Cancelled">Cancelled</MenuItem>
+                        <MenuItem value={TaskStatus.PENDING}>Pending</MenuItem>
+                        <MenuItem value={TaskStatus.IN_PROGRESS}>In Progress</MenuItem>
+                        <MenuItem value={TaskStatus.COMPLETED}>Completed</MenuItem>
+                        <MenuItem value={TaskStatus.CANCELLED}>Cancelled</MenuItem>
                     </Select>
                 </FormControl>
                 <TextField

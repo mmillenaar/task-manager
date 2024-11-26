@@ -1,4 +1,4 @@
-import { Task, AuthResponse, ApiError } from "./types";
+import { Task, AuthResponse, ApiError, TaskResponse } from "./types";
 
 export const api = {
     baseUrl: 'http://localhost:3030/api',
@@ -41,10 +41,10 @@ export const api = {
                 body: JSON.stringify({ email, password }),
             }),
 
-        register: (email: string, password: string): Promise<AuthResponse> =>
+        register: (email: string, username: string, password: string): Promise<AuthResponse> =>
             api.request('/users/register', {
                 method: 'POST',
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ email, username, password }),
             }),
 
         logout: (): Promise<void> =>
@@ -55,16 +55,30 @@ export const api = {
 
     // Tasks endpoints
     tasks: {
-        getAll: (userId: string): Promise<Task[]> =>
-            api.request(`/users/${userId}/tasks`),
+        getAll: (userId: string, filters?: { tags?: string[], status?: string }): Promise<Task[]> => {
+            const queryParams = new URLSearchParams();
 
-        create: (userId: string, task: Omit<Task, 'id' | 'userId'>): Promise<Task> =>
+            // Add tags to query params
+            filters?.tags?.forEach(tag => {
+                queryParams.append('tags', tag);
+            });
+
+            // Add status to query params
+            if (filters?.status) {
+                queryParams.append('status', filters.status);
+            }
+
+            const queryString = queryParams.toString();
+            return api.request(`/users/${userId}/tasks${queryString ? `?${queryString}` : ''}`);
+        },
+
+        create: (userId: string, task: Omit<Task, 'id' | 'userId'>): Promise<TaskResponse> =>
             api.request(`/users/${userId}/tasks`, {
                 method: 'POST',
                 body: JSON.stringify(task),
             }),
 
-        update: (userId: string, taskId: string, task: Partial<Task>): Promise<Task> =>
+        update: (userId: string, taskId: string, task: Partial<Task>): Promise<TaskResponse> =>
             api.request(`/users/${userId}/tasks/${taskId}`, {
                 method: 'PUT',
                 body: JSON.stringify(task),

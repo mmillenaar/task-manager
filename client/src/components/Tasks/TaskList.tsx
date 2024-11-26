@@ -4,10 +4,15 @@ import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
 import { useTask } from '../../context/TaskContext';
 import { TaskForm } from './TaskForm';
 import { Task } from '../../utils/types';
+import { STATUS_STYLES } from '../../utils/constants';
+import { TagFilter } from '../filters/TagFilter';
+import { StatusFilter } from '../filters/StatusFilter';
+import { useAuth } from '../../context/AuthContext';
 
 export const TaskList: React.FC = () => {
     const [editingTask, setEditingTask] = useState<Task | null>(null);
     const { tasks, loading, error, fetchTasks, deleteTask } = useTask();
+    const { user } = useAuth();
 
     useEffect(() => {
         fetchTasks();
@@ -33,9 +38,12 @@ export const TaskList: React.FC = () => {
                     color: 'transparent',
                 }}
             >
-                My Tasks
+                {user?.username}'s Tasks
             </Typography>
-
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TagFilter />
+                <StatusFilter />
+            </Box>
             {editingTask ? (
                 <TaskForm
                     editTask={editingTask}
@@ -53,7 +61,7 @@ export const TaskList: React.FC = () => {
                     {tasks.length === 0 ? (
                         <Box sx={{ p: 3, textAlign: 'center' }}>
                             <Typography color="text.secondary">
-                                No tasks yet. Create one above!
+                                No tasks yet. Create one with the button below!
                             </Typography>
                         </Box>
                     ) : (
@@ -105,13 +113,11 @@ export const TaskList: React.FC = () => {
                                                     <Chip
                                                         label={task.status}
                                                         size="small"
-                                                        color={
-                                                            task.status === 'Completed'
-                                                                ? 'success'
-                                                                : task.status === 'In Progress'
-                                                                    ? 'primary'
-                                                                    : 'default'
-                                                        }
+                                                        sx={{
+                                                            ...STATUS_STYLES[task.status],
+                                                            borderWidth: 1,
+                                                            borderStyle: 'solid'
+                                                        }}
                                                     />
                                                     {task.tags?.map((tag, index) => (
                                                         <Chip

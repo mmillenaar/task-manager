@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState } from 'react';
 import { api } from '../utils/api';
 import { useAuth } from './AuthContext';
-import { Task, TaskContextType } from '../utils/types';
+import { Task, TaskContextType, TaskQueryParams } from '../utils/types';
+import { TaskStatus } from '../utils/constants';
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
@@ -9,14 +10,16 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [selectedStatus, setSelectedStatus] = useState<TaskStatus | null>(null);
     const { user } = useAuth();
 
-    const fetchTasks = async () => {
+    const fetchTasks = async (filters?: TaskQueryParams) => {
         if (!user) return;
         setLoading(true);
         try {
-            const tasksData = await api.tasks.getAll(user.id);
-            setTasks(tasksData as Task[]);
+            const tasksData = await api.tasks.getAll(user.id, filters);
+            setTasks(tasksData);
             setError(null);
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Failed to fetch tasks');
@@ -25,12 +28,22 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const filterTasks = async (filters: TaskQueryParams) => {
+        setSelectedTags(filters.tags || []);
+        setSelectedStatus(filters.status || null);
+        await fetchTasks(filters);
+    };
+
     const createTask = async (task: Omit<Task, 'id' | 'userId'>) => {
         if (!user) return;
         try {
-            const newTask = await api.tasks.create(user.id, task);
-            setTasks([...tasks, newTask as Task]);
-            setError(null);
+            const response = await api.tasks.create(user.id, task);
+            if (response.success && response.task) {
+                setTasks([...tasks, response.task]);
+                setError(null);
+            } else {
+                throw new Error(response.message || 'Failed to create task');
+            }
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Failed to create task');
             throw error;
@@ -40,9 +53,13 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updateTask = async (id: string, task: Partial<Task>) => {
         if (!user) return;
         try {
-            const updatedTask = await api.tasks.update(user.id, id, task);
-            setTasks(tasks.map(t => t.id === id ? updatedTask as Task : t));
-            setError(null);
+            const response = await api.tasks.update(user.id, id, task);
+            if (response.success && response.task) {
+                setTasks(tasks.map(t => t.id === id ? response.task! : t));
+                setError(null);
+            } else {
+                throw new Error(response.message || 'Failed to update task');
+            }
         } catch (error) {
             setError(error instanceof Error ? error.message : 'Failed to update task');
             throw error;
@@ -62,7 +79,19 @@ export const TaskProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <TaskContext.Provider value={{ tasks, loading, error, createTask, updateTask, deleteTask, fetchTasks }}>
+        <TaskContext.Provider value={{
+            tasks,
+            loading,
+            error,
+            createTask,
+            updateTask,
+            deleteTask,
+            fetchTasks,
+            filterTasks,
+            selectedTags,
+            selectedStatus,
+            setSelectedStatus
+        }}>
             {children}
         </TaskContext.Provider>
     );
