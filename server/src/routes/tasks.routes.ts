@@ -5,7 +5,9 @@ import * as tasksController from "../controllers/tasks.controller";
 export const createTasksRouter =() => {
     const tasksRouter = Router({mergeParams: true})
 
-    tasksRouter.route('/').post(tasksController.createTask)
+    tasksRouter.route('/')
+        .get(tasksController.getAllTasks)
+        .post(tasksController.createTask)
 
     tasksRouter.route('/:taskId')
         .get(tasksController.getTask)

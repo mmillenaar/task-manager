@@ -1,5 +1,5 @@
 import { Task } from "@prisma/client";
-import { TaskData } from "../utils/types";
+import { TagData, TaskData } from "../utils/types";
 import prisma from "../config/db.config";
 
 export const getAllTasks = async (userId: string): Promise<Task[]> => {
@@ -27,11 +27,11 @@ export const getTask = async (taskId: string): Promise<Task> => {
 }
 
 // Helper function for handling tags
-const getOrCreateTags = async (tags: string[]): Promise<{ id: string }[]> => {
+const getOrCreateTags = async (tags: TagData[]): Promise<{ id: string }[]> => {
     const tagConnections = await Promise.all(
-        tags.map(async (tagName) => {
+        tags.map(async (tag) => {
             const existingTag = await prisma.tag.findUnique({
-                where: { name: tagName }
+                where: { name: tag.name }
             });
 
             if (existingTag) {
@@ -39,7 +39,7 @@ const getOrCreateTags = async (tags: string[]): Promise<{ id: string }[]> => {
             }
 
             const newTag = await prisma.tag.create({
-                data: { name: tagName }
+                data: { name: tag.name }
             });
 
             return { id: newTag.id }
@@ -91,7 +91,7 @@ export const updateTask = async (
         where: { id: taskId },
         data: {
             ...(data.title && { title: data.title }),
-            ...(data.description && { description: data.description }),
+            ...(data.description !== undefined && { description: data.description }),
             ...(data.status && { status: data.status }),
             ...(data.dueDate && { dueDate: data.dueDate }),
             tags: {

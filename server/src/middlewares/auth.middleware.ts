@@ -1,7 +1,11 @@
 import { NextFunction, Request, Response } from "express";
 import { verifyToken } from "../utils/jwt";
 
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+interface AuthenticatedRequest extends Request {
+    user?: { id: string };
+}
+
+export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
         const authHeader = req.headers.authorization
 

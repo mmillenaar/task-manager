@@ -34,7 +34,10 @@ export const register = async (data: UserValidationData): Promise<Omit<User, 'pa
 
 export const login = async (credentials: UserValidationData): Promise<Omit<User, 'password'> | null> => {
     const user = await prisma.user.findUnique({
-        where: { username: credentials.email }
+        where: { username: credentials.email },
+        include: {
+            tasks: true
+        }
     });
 
     if (!user) {

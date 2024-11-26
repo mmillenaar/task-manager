@@ -1,3 +1,4 @@
+import { Tag, User } from "@prisma/client"
 import { TaskStatus } from "./constants"
 
 export interface UserValidationData {
@@ -11,5 +12,15 @@ export interface TaskData {
     description?: string
     dueDate?: Date
     status?: TaskStatus
-    tags?: string[]
+    tags?: TagData[]
+}
+
+export interface TagData {
+    name: string
+    id?: string
+}
+
+export interface AuthResponse {
+    token: string
+    user: User
 }
